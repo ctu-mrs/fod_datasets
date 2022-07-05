@@ -1,0 +1,2 @@
+sensor_msgs/RegionOfInterest bounding_box
+float32 range
