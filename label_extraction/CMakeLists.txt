@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   tf2
   tf2_geometry_msgs
+  dynamic_reconfigure
 )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -34,6 +35,10 @@ add_message_files(DIRECTORY msg FILES
 generate_messages(DEPENDENCIES
   std_msgs
   sensor_msgs
+)
+
+generate_dynamic_reconfigure_options(
+  config/Visualization.cfg
 )
 
 catkin_package(

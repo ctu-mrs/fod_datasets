@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
 import rospy
-import struct
 import tf2_ros
 import tf2_geometry_msgs
 from cv_bridge import CvBridge
@@ -42,16 +41,13 @@ class LabelExtractor:
     imw = None # image width, loaded from the first received image
     imh = None # image height, loaded from the first received image
 
-    use_single_channel = True # used only for visualization
-    ignore_secondary = True # if true, only the track that is marked as selected will be used, others will be ignored
-    ignore_masked = True # if true, tracks that are masked out (hidden by the observer's body) will be ignored
+    ignore_secondary = False # if true, only the track that is marked as selected will be used, others will be ignored
+    ignore_masked = False # if true, tracks that are masked out (hidden by the observer's body) will be ignored
     mask = None # used to mask out detections covered by body of the observer, loaded at initialization
 
     # some helper members
     tf_buffer = None
     bridge = CvBridge()
-    video_fname = None
-    video_writer = None
 
 
     def project3Dto2D(self, point3d):
@@ -121,26 +117,12 @@ class LabelExtractor:
         self.imw = ambient_img.width
         self.imh = ambient_img.height
 
-        if self.video_writer is None and self.video_fname is not None:
-            self.video_writer = cv2.VideoWriter(self.video_fname, cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (self.imw,self.imh))
-
         # find the transformation from the tracks' frame to the images' frame
         try:
             transformation = self.tf_buffer.lookup_transform(ambient_img.header.frame_id, tracks_msg.header.frame_id, tracks_msg.header.stamp)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             rospy.logerr("Couldn't transform msg from frame {} to frame {} at {}".format(ambient_img.header.frame_id, tracks_msg.header.frame_id, tracks_msg.header.stamp))
             return
-
-        # Prepare the visualization window
-        cvim = np.zeros((ambient_img.height, ambient_img.width, 3), dtype=np.uint8)
-        if self.use_single_channel:
-            cvim[:, :, 0] = self.bridge.imgmsg_to_cv2(ambient_img, desired_encoding='passthrough')
-            cvim[:, :, 1] = self.bridge.imgmsg_to_cv2(ambient_img, desired_encoding='passthrough')
-            cvim[:, :, 2] = self.bridge.imgmsg_to_cv2(ambient_img, desired_encoding='passthrough')
-        else:
-            cvim[:, :, 0] = self.bridge.imgmsg_to_cv2(ambient_img, desired_encoding='passthrough')
-            cvim[:, :, 1] = self.bridge.imgmsg_to_cv2(intensity_img, desired_encoding='passthrough')
-            cvim[:, :, 2] = self.bridge.imgmsg_to_cv2(range_img, desired_encoding='passthrough')
 
         # Process the tracks
         labels_msg = Labels()
@@ -174,22 +156,14 @@ class LabelExtractor:
             labels_msg.labels.append(label)
 
             track_processed = True
-            color = (255,0,0)
-            if masked_out:
-                color = (0,0,255)
-            cv2.rectangle(cvim, (bb.tl[0], bb.tl[1]), (bb.br[0], bb.br[1]), color)
 
         if not track_processed:
             rospy.logwarn("No valid track out of {} tracks!".format(len(tracks_msg.tracks)))
 
-        self.pub.publish(labels_msg)
-
-        cv2.imshow("tgt_vis", cvim)
-        cv2.waitKey(1)
-
-        # Optionally also write the image to the video
-        if self.video_writer is not None:
-            self.video_writer.write(cvim)
+        try:
+            self.pub.publish(labels_msg)
+        except:
+            rospy.logwarn("Could not publish labels!")
 
 
     def __init__(self):
@@ -217,8 +191,7 @@ class LabelExtractor:
 
         ts = message_filters.TimeSynchronizer([sub_tgt, sub_ambient, sub_intensity, sub_range], 10)
         ts.registerCallback(self.callback)
-        cv2.namedWindow("tgt_vis", cv2.WINDOW_GUI_EXPANDED)
-        rospy.loginfo_throttle(1.0, "Initialzied, waiting for messages")
+        rospy.loginfo_throttle(1.0, "Initialzied extractor, waiting for messages")
 
 
     def spin(self):
