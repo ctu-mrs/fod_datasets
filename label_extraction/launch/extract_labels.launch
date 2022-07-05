@@ -7,16 +7,16 @@
     <node pkg="label_extraction" type="extract_labels.py" name="label_extractor" output="screen" >
       
       <param name="uav_name" value="$(arg uav_name)" />
-      <param name="mask_filename" value="$(find label_extraction)/masks/eaglemk3_os0.bmp" />
+      <param name="mask_filename" value="$(find label_extraction)/masks/eaglemk2_os0_mask.bmp" />
 
       <!-- input topics -->
-      <remap from="~lidar_tracker/tracks"             to="lidar_tracker/tracks" />
-      <remap from="~os_img_nodelet/ambient_image"     to="os_img_nodelet/ambient_image" />
-      <remap from="~os_img_nodelet/intensity_image"   to="os_img_nodelet/intensity_image" />
-      <remap from="~os_img_nodelet/range_image"       to="os_img_nodelet/range_image" />
+      <remap from="lidar_tracker/tracks"             to="lidar_tracker/tracks" />
+      <remap from="os_img_nodelet/ambient_image"     to="os_img_nodelet/ambient_image" />
+      <remap from="os_img_nodelet/intensity_image"   to="os_img_nodelet/intensity_image" />
+      <remap from="os_img_nodelet/range_image"       to="os_img_nodelet/range_image" />
 
       <!-- output topics -->
-      <remap from="~labels" to="/dataset/labels" />
+      <remap from="labels" to="/dataset/labels" />
 
     </node>
   

@@ -32,7 +32,7 @@ class BoundingBox:
     range = None
 
 
-class LabelExtractor:
+class LabelVisualizer:
     # the main parameters of this script - the vertical and horizontal field of view of the sensor
     vfov = np.pi/2.0
     hfov = 2.0*np.pi
@@ -116,20 +116,11 @@ class LabelExtractor:
         ret.range = np.linalg.norm(np.array((tfd.x, tfd.y, tfd.z)))
         return ret
 
-    def callback(self, tracks_msg, ambient_img, intensity_img, range_img):
+    def callback(self, labels_msg, ambient_img, intensity_img, range_img):
         rospy.loginfo_throttle(1.0, "Getting messages")
-        self.imw = ambient_img.width
-        self.imh = ambient_img.height
 
         if self.video_writer is None and self.video_fname is not None:
             self.video_writer = cv2.VideoWriter(self.video_fname, cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (self.imw,self.imh))
-
-        # find the transformation from the tracks' frame to the images' frame
-        try:
-            transformation = self.tf_buffer.lookup_transform(ambient_img.header.frame_id, tracks_msg.header.frame_id, tracks_msg.header.stamp)
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            rospy.logerr("Couldn't transform msg from frame {} to frame {} at {}".format(ambient_img.header.frame_id, tracks_msg.header.frame_id, tracks_msg.header.stamp))
-            return
 
         # Prepare the visualization window
         cvim = np.zeros((ambient_img.height, ambient_img.width, 3), dtype=np.uint8)
@@ -142,49 +133,21 @@ class LabelExtractor:
             cvim[:, :, 1] = self.bridge.imgmsg_to_cv2(intensity_img, desired_encoding='passthrough')
             cvim[:, :, 2] = self.bridge.imgmsg_to_cv2(range_img, desired_encoding='passthrough')
 
-        # Process the tracks
-        labels_msg = Labels()
-        labels_msg.header = ambient_img.header
-        track_processed = False
-        for track in tracks_msg.tracks:
+        # Process the labels
+        for label in labels_msg.labels:
             if not track.selected and self.ignore_secondary:
                 continue
 
-            bb = self.getBoundingBox(track, transformation)
-            if bb.u < 0 or bb.u >= self.imw or bb.v < 0 or bb.v >= self.imh:
-                rospy.logwarn("Target is outside the bounds of the image: [{}, {}] not within [{}, {}]".format(bb.u, bb.v, self.imw, self.imh))
-                continue
-
-            masked_out = False
-            if self.mask is not None and not self.mask[bb.v,bb.u].any():
-                masked_out = True
-
-            if masked_out and self.ignore_masked:
-                continue
-
-            label = Label()
-            label.id = track.id
-            label.range = bb.range
-            label.bounding_box.x_offset = bb.tl[0]
-            label.bounding_box.y_offset = bb.tl[1]
-            label.bounding_box.width = bb.width
-            label.bounding_box.height = bb.height
-            label.masked_out = masked_out
-            label.primary = track.selected
-            labels_msg.labels.append(label)
-
-            track_processed = True
             color = (255,0,0)
-            if masked_out:
+            if label.masked_out:
                 color = (0,0,255)
-            cv2.rectangle(cvim, (bb.tl[0], bb.tl[1]), (bb.br[0], bb.br[1]), color)
-
-        if not track_processed:
-            rospy.logwarn("No valid track out of {} tracks!".format(len(tracks_msg.tracks)))
+            tl = (label.bounding_box.x_offset, label.bounding_box.y_offset)
+            br = (tl[0] + label.bounding_box.width, tl[1] + label.bounding_box.height)
+            cv2.rectangle(cvim, (tl[0], tl[1]), (br[0], br[1]), color)
 
         self.pub.publish(labels_msg)
 
-        cv2.imshow("tgt_vis", cvim)
+        cv2.imshow("label_vis", cvim)
         cv2.waitKey(1)
 
         # Optionally also write the image to the video
@@ -194,28 +157,15 @@ class LabelExtractor:
 
     def __init__(self):
 
-        # Load parameters
-        mask_fname = rospy.get_param("~mask_filename")
-
-        # Load mask
-        if len(mask_fname) > 0:
-            self.mask = cv2.imread(mask_fname)
-            if self.mask is None:
-                rospy.logwarn("Could not load mask from file {}".format(mask_fname))
-
         # Create publishers
-        self.pub = rospy.Publisher("labels", Labels, queue_size=2)
+        self.pub = rospy.Publisher("label_vis", Image, queue_size=2)
 
-        # Create subscribers
-        self.tf_buffer = tf2_ros.Buffer()
-        listener = tf2_ros.TransformListener(self.tf_buffer)
-
-        sub_tgt = message_filters.Subscriber("lidar_tracker/tracks", Tracks)
+        sub_lbl = message_filters.Subscriber("labels_in", Tracks)
         sub_ambient = message_filters.Subscriber("os_img_nodelet/ambient_image", Image)
         sub_intensity = message_filters.Subscriber("os_img_nodelet/intensity_image", Image)
         sub_range = message_filters.Subscriber("os_img_nodelet/range_image", Image)
 
-        ts = message_filters.TimeSynchronizer([sub_tgt, sub_ambient, sub_intensity, sub_range], 10)
+        ts = message_filters.TimeSynchronizer([sub_lbl, sub_ambient, sub_intensity, sub_range], 10)
         ts.registerCallback(self.callback)
         cv2.namedWindow("tgt_vis", cv2.WINDOW_GUI_EXPANDED)
         rospy.loginfo_throttle(1.0, "Initialzied, waiting for messages")
@@ -226,6 +176,6 @@ class LabelExtractor:
 
 
 if __name__ == "__main__":
-    rospy.init_node("label_extractor")
-    le = LabelExtractor()
-    le.spin()
+    rospy.init_node("label_visualizer")
+    lv = LabelVisualizer()
+    lv.spin()
