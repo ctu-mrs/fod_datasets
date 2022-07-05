@@ -7,6 +7,7 @@ To download the datasets, run script `download.sh [datasets]`.
 - All datasets will be downloaded if no argument is given.
 
 ## Datasets
+- [cnn_training](./cnn_training/README.md) [1]
 - [cisar21](./cisar21/README.md) [1]
 - [usmocku21](./usmocku21/README.md) [1]
 - [cisar22](./cisar22/README.md) [1]
