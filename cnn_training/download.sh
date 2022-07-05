@@ -17,7 +17,7 @@ download_data() {
 ######################################################
 # Add datasets here:
 echo Downloading data for dataset: cnn_training
-URL=TBD
+URL=https://nasmrs.felk.cvut.cz/index.php/s/SPJtnvaJEBXadni/download
 
 # URLs for files and their respective subdirectories
 URL=( "$URL" )

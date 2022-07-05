@@ -1,7 +1,7 @@
 #!/bin/bash
 
-DEFAULT_DATASETS="cisar21"
-ALLOWED_DATASETS=( "cisar21" )
+DEFAULT_DATASETS="cnn_training"
+ALLOWED_DATASETS=( "cnn_training" )
 
 # Do not change below
 

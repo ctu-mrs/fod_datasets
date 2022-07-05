@@ -78,9 +78,9 @@ class LabelVisualizer:
         self.pub = rospy.Publisher("labels_vis", Image, queue_size=2)
 
         sub_lbl = message_filters.Subscriber("labels_in", Labels)
-        sub_ambient = message_filters.Subscriber("os_img_nodelet/ambient_image", Image)
-        sub_intensity = message_filters.Subscriber("os_img_nodelet/intensity_image", Image)
-        sub_range = message_filters.Subscriber("os_img_nodelet/range_image", Image)
+        sub_ambient = message_filters.Subscriber("ambient_image", Image)
+        sub_intensity = message_filters.Subscriber("intensity_image", Image)
+        sub_range = message_filters.Subscriber("range_image", Image)
 
         ts = message_filters.TimeSynchronizer([sub_lbl, sub_ambient, sub_intensity, sub_range], 10)
         ts.registerCallback(self.callback)

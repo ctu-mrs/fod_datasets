@@ -1,22 +1,16 @@
 <launch>
   
-  <arg name="uav_name" default="$(optenv UAV_NAME uav91)"/>
+  <node pkg="label_extraction" type="visualize_labels.py" name="label_visualizer" output="screen" >
+    
+    <!-- input topics -->
+    <remap from="labels_in" to="/dataset/labels" />
+    <remap from="ambient_image"     to="/lidar/ambient_image" />
+    <remap from="intensity_image"   to="/lidar/intensity_image" />
+    <remap from="range_image"       to="/lidar/range_image" />
 
-  <group ns="$(arg uav_name)" >
+    <!-- output topics -->
+    <remap from="labels_vis" to="/dataset/labels_vis" />
 
-    <node pkg="label_extraction" type="visualize_labels.py" name="label_visualizer" output="screen" >
-      
-      <!-- input topics -->
-      <remap from="labels_in" to="/dataset/labels" />
-      <remap from="os_img_nodelet/ambient_image"     to="os_img_nodelet/ambient_image" />
-      <remap from="os_img_nodelet/intensity_image"   to="os_img_nodelet/intensity_image" />
-      <remap from="os_img_nodelet/range_image"       to="os_img_nodelet/range_image" />
-
-      <!-- output topics -->
-      <remap from="labels_vis" to="/dataset/labels_vis" />
-
-    </node>
-
-  </group>
+  </node>
 
 </launch>

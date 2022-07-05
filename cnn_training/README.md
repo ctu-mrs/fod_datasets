@@ -8,6 +8,6 @@ The rosbag contains the following topics of interest:
 * `/lidar/intensity_image` - 8-bit grayscale images representing the *intensity* channel captured by the LiDAR
 * `/lidar/range_image` - 8-bit grayscale images representing the *range* channel captured by the LiDAR
 * `/rgb/image_raw/compressed` - RGB images from the onboard camera
-* `/labels` - bounding boxe and range of the target in the LiDAR images
+* `/dataset/labels` - bounding boxe and range of the target in the LiDAR images
 * `/tf_static` - contains the transformation between the LiDAR frames and the RGB camera
 
